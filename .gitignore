@@ -1,0 +1,6 @@
+# Mengabaikan file sementara atau build
+*.log            # Semua file .log
+*.tmp            # Semua file .tmp
+node_modules/    # Folder node_modules (untuk proyek Node.js)
+dist/            # Folder dist (hasil build)
+*.env            # File .env (biasanya berisi konfigurasi atau kredensial pribadi)
