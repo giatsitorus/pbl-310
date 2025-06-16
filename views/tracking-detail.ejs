@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('components/head') %>
+<body>
+
+  <h1 style="text-align:center; margin-top:1rem;"><%= title %></h1>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+
+  <script>
+    const map = L.map('map').setView([<%= lat1 %>, <%= lon1 %>], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.Routing.control({
+      waypoints: [
+        L.latLng(<%= lat1 %>, <%= lon1 %>),
+        L.latLng(<%= lat2 %>, <%= lon2 %>)
+      ],
+      lineOptions: {
+        styles: [{ color: 'blue', opacity: 0.6, weight: 5 }]
+      },
+      routeWhileDragging: false
+    }).addTo(map);
+  </script>
+</body>
+</html>
