@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<%- include('components/head') %>
+<body class="d-flex flex-column min-vh-100">
+    <%- include('components/navigation') %>
+  <!-- Content -->
+  <main class="container pt-5 mt-5">
+    <div class="card shadow p-4">
+      <h2 class="text-primary mb-3">📤 Lapor Jalan Berlubang</h2>
+      <form>
+        <div class="mb-3">
+          <label for="lokasi" class="form-label">Lokasi (klik di peta)</label>
+          <input type="text" id="lokasi" class="form-control" placeholder="Klik pada peta untuk memilih koordinat" readonly required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Pilih Lokasi di Peta</label>
+          <div id="map"></div>
+        </div>
+        <div class="mb-3">
+          <label for="deskripsi" class="form-label">Deskripsi</label>
+          <textarea id="deskripsi" class="form-control" rows="3" placeholder="Tambahkan detail seperti ukuran lubang, bahaya, dll"></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="gambar" class="form-label">Upload Gambar</label>
+          <input type="file" id="gambar" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-success">Kirim Laporan</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center text-muted py-4 bg-white mt-auto shadow-sm">
+    &copy; 2025 Hole Vision. All rights reserved.
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="assets/main.js"></script>
+
+  <script>
+    const map = L.map('map').setView([1.0456, 104.0305], 13); // Pusat di Batam
+
+    // Tambahkan tile dari OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Marker dinamis saat klik peta
+    let marker;
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      if (marker) marker.remove(); // Hapus marker sebelumnya
+      marker = L.marker([lat, lng]).addTo(map);
+      document.getElementById("lokasi").value = `Koordinat: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    });
+  </script>
+</body>
+</html>

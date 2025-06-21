@@ -6,7 +6,7 @@
     <div class="container mt-3">
         <div class="hd-tracking-container">
             <div class="hd-icon">
-                <img src="./camera-svgrepo-com.svg"/>
+                <img src="./assets/camera-svgrepo-com.svg"/>
                 <span>Camera Preview</span>
             </div>
             <video id="video" autoplay muted></video>
@@ -21,11 +21,11 @@
           <div class="hd-btn-container">
             <button class="hd-btn-detect hd-start" id="startStream">
               <span>Start</span>
-              <img src="./play-1003-svgrepo-com.svg" alt="">
+              <img src="./assets/play-1003-svgrepo-com.svg" alt="">
             </button>
             <button class="hd-btn-detect hd-stop" id="stopStream">
               <span>Stop</span>
-              <img src="./stop-svgrepo-com.svg" alt="">
+              <img src="./assets/stop-svgrepo-com.svg" alt="">
             </button>
           </div>
         </div>
@@ -85,7 +85,7 @@
   
         const imageData = hiddenCanvas.toDataURL('image/jpeg');
   
-        fetch('https://192.168.1.15:5000/detect', {
+        fetch('https://pbl-310.duckdns.org/detect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: imageData })
