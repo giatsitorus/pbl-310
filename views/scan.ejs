@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<%- include('components/head') %>
+<body class="d-flex flex-column min-vh-100">
+  <!-- Navbar -->
+  <%- include('components/navigation') %>
+
+  <!-- Main Content -->
+  <main class="container pt-4">
+    <div class="card shadow p-4">
+      <h2 class="text-primary mb-3">🚗 Mulai Scan Jalan</h2>
+      <p class="text-muted mb-4">Klik tombol di bawah untuk mulai mendeteksi lubang jalan menggunakan kamera Anda.</p>
+
+      <div class="text-center mb-4 hd-tracking-container">
+        <div class="hd-icon">
+            <img src="./assets/camera-svgrepo-com.svg"/>
+            <span>Camera Preview</span>
+        </div>
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="d-flex flex-column-reverse flex-md-row justify-content-between">
+        <div class="d-flex flex-column">
+            <div class="hd-info">
+                <span>Lokasi Awal</span>
+                <span>:</span>
+                <span id="startLocation">-</span>
+            </div>
+            <div class="hd-info">
+                <span>Jumlah Lubang</span>
+                <span>:</span>
+                <span id="holeDetected">0</span>
+            </div>
+            <div class="hd-info">
+                <span>Jarak</span>
+                <span>:</span>
+                <span id="distance">0.0 km</span>
+            </div>
+        </div>
+        <div>
+          <div class="d-flex flex-row justify-content-between">
+            <button id="startScanning" class="btn hd-start px-4 hd-btn-detect m-1">
+              <span>Start</span>
+              <img class="img" src="./assets/play-1003-svgrepo-com.svg" alt="">
+            </button>
+            <button id="endScanning" class="btn btn-danger px-4 hd-btn-detect m-1">
+              <span>Stop</span>
+              <img src="./assets/stop-svgrepo-com.svg" alt="">
+            </button>
+          </div>
+          <div class="d-flex flex-row justify-content-between">
+            <button type="button" class="btn px-4 hd-btn-detect m-1 btn-primary" data-bs-toggle="modal" data-bs-target="#confirmModal">
+              <span>Submit</span>
+              <img src="./assets/upload-svgrepo-com.svg" alt="">
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmModalLabel">Konfirmasi</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          Yakin ingin mengirim data ini?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary" id="confirmSubmit">Konfirmasi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center text-muted py-4 bg-white mt-auto shadow-sm">
+    &copy; 2025 Hole Vision. All rights reserved.
+  </footer>
+
+  <!-- Bootstrap & Script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="./scan_script.js"></script>
+</body>
+</html>

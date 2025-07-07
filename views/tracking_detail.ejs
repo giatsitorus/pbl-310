@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<%- include('components/head') %>
+<body class="d-flex flex-column min-vh-100">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand text-primary fw-bold" href="index.html">Hole Vision</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container pt-5 mt-5">
+    <div class="card shadow p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-primary mb-0">📍 Detail Laporan</h2>
+        <div>
+          <button class="btn btn-outline-secondary btn-sm me-2">📥 Download PDF</button>
+          <% if (detection.status == 'diterima') { %>
+            <span id="statusBadge" class="status-badge status-diterima">✔️ Diterima</span>
+          <% }else if (detection.status == 'ditolak') { %>
+            <span id="statusBadge" class="status-badge status-ditolak">❌ Ditolak</span>
+          <% } else if (detection.status == 'menunggu') { %>
+            <span id="statusBadge" class="status-badge status-menunggu">⏳ Menunggu</span>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6"><p><strong>Nama Pelapor:</strong> <span id="nama"><%= detection.user_name %></span></p></div>
+        <div class="col-md-6"><p><strong>Jarak:</strong> <span id="jarak"><%= detection.distance %> Km</span></p></div>
+        <div class="col-md-6"><p><strong>Tanggal:</strong> <span id="tanggal"><%= detection.created_at %></span></p></div>
+        <div class="col-md-6"><p><strong>Jumlah Lubang:</strong> <span id="lubang"><%= detection.hole_count %></span></p></div>
+        <div class="col-md-12"><p><strong>Dari:</strong> <span id="dari"><%= detection.start_location %></span></p></div>
+        <div class="col-md-12"><p><strong>Ke:</strong> <span id="ke"><%= detection.end_location %></span></p></div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div id="carouselImages" class="carousel slide slide-images" data-bs-ride="carousel">
+            <div class="carousel-inner bg-black ">
+              <% detectionImages.forEach((image, index) => { %>
+                <div class="carousel-item <%= index === 0 ? 'active' : '' %>">
+                  <img src="http://192.168.99.193:5000/images/<%= image.image_path %>" class="h-100 rounded" alt="">
+                </div>
+              <% }) %>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselImages" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselImages" data-bs-slide="next">
+              <span class="carousel-control-next-icon"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="mapDetail" class="mb-3"></div>
+      <% if (detection.status == 'menunggu') { %>
+        <div class="d-flex justify-content-end gap-2">
+          <button class="btn btn-success" onclick="confirmTerima()">✔️ Terima</button>
+          <button class="btn btn-danger" onclick="promptTolak()">❌ Tolak</button>
+        </div>
+      <% } %>
+
+      
+    </div>
+  </main>
+
+  <!-- Modal Tolak -->
+  <div class="modal fade" id="modalTolak" tabindex="-1" aria-labelledby="modalTolakLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="modalTolakLabel">Alasan Penolakan</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formTolak">
+            <div class="mb-3">
+              <label for="alasanTolak" class="form-label">Masukkan alasan penolakan:</label>
+              <textarea class="form-control" id="alasanTolak" rows="3" required></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-danger">Tolak</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center text-muted py-4 bg-white mt-auto shadow-sm">
+    &copy; 2025 Hole Vision. All rights reserved.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+    const coordinates = <%- JSON.stringify(detectionHistory) %>;
+    console.log(coordinates);
+
+    if (coordinates.length > 0) {
+      const map = L.map("mapDetail").setView(coordinates[0], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const polyline = L.polyline(coordinates, { color: 'blue' }).addTo(map);
+      map.fitBounds(polyline.getBounds());
+    }
+  });
+
+  </script>
+</body>
+</html>

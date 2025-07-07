@@ -6,10 +6,26 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
     <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link fw-semibold fs-6" href="/tracking">Scan</a></li>
-        <li class="nav-item"><a class="nav-link fw-semibold fs-6" href="/tracking-history">Riwayat</a></li>
-        <li class="nav-item"><a class="nav-link fw-semibold fs-6" href="/report">Lapor</a></li>
-        <li class="nav-item"><a class="nav-link fw-semibold fs-6" href="/profile">Profil</a></li>
+        <li class="nav-item">
+        <a class="nav-link fw-semibold fs-6 <%= currentPath === '/scan' ? 'active' : '' %>" href="/scan">Scan</a>
+        </li>
+        <li class="nav-item">
+        <a class="nav-link fw-semibold fs-6 <%= currentPath === '/tracking-history' ? 'active' : '' %>" href="/tracking-history">Riwayat</a>
+        </li>
+        <% if (user && user.role === 'admin') { %>
+        <li class="nav-item">
+            <a class="nav-link fw-semibold fs-6 <%= currentPath === '/manage-user' ? 'active' : '' %>" href="/manage-user">Daftar Pengguna</a>
+        </li>
+        <% } %>
+        <% if (user) { %>
+        <li class="nav-item">
+            <a class="nav-link fw-semibold fs-6 <%= currentPath === '/profile' ? 'active' : '' %>" href="/profile">Profil</a>
+        </li>
+        <% } else { %>
+        <li class="nav-item">
+            <a class="nav-link fw-semibold fs-6 <%= currentPath === '/login' ? 'active' : '' %>" href="/login">Log In</a>
+        </li>
+        <% } %>
     </ul>
     </div>
 </div>

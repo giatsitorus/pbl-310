@@ -10,15 +10,18 @@
     <div class="card shadow p-4 mb-4">
       <h2 class="text-primary mb-4">👤 Profil Pengguna</h2>
       <div class="mb-3">
-        <p><strong>Nama:</strong> John Doe</p>
-        <p><strong>Email:</strong> john@example.com</p>
-        <p><strong>Telepon:</strong> +62 812 3456 7890</p>
-        <p><strong>Password:</strong> ******</p>
+        <p><strong>Nama: </strong><%= user.nama %></p>
+        <p><strong>Email: </strong><%= user.email %></p>
+        <p><strong>Telepon: </strong><%= user.phone %></p>
       </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">Edit Profil</button>
-        <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Ganti Password</button>
-        <a href="#" class="btn btn-danger ms-auto">Keluar</a>
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">Edit Profil</button>
+          <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Ganti Password</button>
+        </div>
+        <form action="/api/logout" method="get">
+          <button type="submit" class="btn btn-danger ms-auto">Keluar</a>
+        </form>
       </div>
     </div>
 
@@ -78,24 +81,25 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Nama</label>
-            <input type="text" class="form-control" value="John Doe" />
-          </div>
+            <input type="text" id="user_name" class="form-control" value="<%= user.nama %>" />
+        </div>
           <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" class="form-control" value="john@example.com" />
+            <input type="email" id="user_email" class="form-control" value="<%= user.email %>" />
           </div>
           <div class="mb-3">
             <label class="form-label">Telepon</label>
-            <input type="text" class="form-control" value="+62 812 3456 7890" />
+            <input type="text" id="user_phone" class="form-control" value="<%= user.phone %>" />
           </div>
           <div class="mb-3">
             <label class="form-label">Verifikasi Password</label>
-            <input type="password" class="form-control" placeholder="Masukkan password saat ini" />
+            <input type="password" id="user_password" class="form-control" placeholder="Masukkan password saat ini" />
+            <div class="invalid-feedback" id="error_profile_password"></div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+          <button type="button" id="saveProfileBtn" class="btn btn-primary">Simpan Perubahan</button>
         </div>
       </form>
     </div>
@@ -104,7 +108,7 @@
   <!-- Modal Ganti Password -->
   <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordLabel" aria-hidden="true">
     <div class="modal-dialog">
-      <form class="modal-content">
+      <form class="modal-content" action="/api/change-password" method="post">
         <div class="modal-header">
           <h5 class="modal-title" id="changePasswordLabel">Ganti Password</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
@@ -112,20 +116,43 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Password Lama</label>
-            <input type="password" class="form-control" placeholder="Password lama" />
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Password baru"
+              required
+            />
+            <div class="invalid-feedback" id="error_password"></div>
           </div>
           <div class="mb-3">
             <label class="form-label">Password Baru</label>
-            <input type="password" class="form-control" placeholder="Password baru" />
+            <input
+              type="password"
+              id="new_password"
+              name="new_password"
+              class="form-control"
+              placeholder="Password baru"
+              required
+            />
           </div>
           <div class="mb-3">
             <label class="form-label">Ulangi Password Baru</label>
-            <input type="password" class="form-control" placeholder="Ulangi password baru" />
+            <input
+              type="password"
+              id="confirm_new_password"
+              name="confirm_new_password"
+              class="form-control"
+              placeholder="Ulangi password baru"
+              required
+            />
+            <div class="invalid-feedback" id="error_confirm"></div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-warning">Simpan Password</button>
+          <button type="button" id="savePasswordBtn" class="btn btn-warning">Simpan Password</button>
         </div>
       </form>
     </div>
@@ -137,6 +164,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/main.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="./profile_script.js"></script>
 </body>
 </html>

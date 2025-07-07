@@ -2,28 +2,50 @@ const express = require('express');
 const path = require('path');
 const flash = require('connect-flash');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const controller = require('./config/controller');
+const conn = require('./config/db');
+const fs = require('fs');
+const https = require('https');
 
 const app = express();
 
-// Set view engine
+const dbOptions = {
+    host: 'localhost',
+    port: 3306,
+    user: 'root',
+    password: 'Password123!',
+    database: 'pbl_310',
+};
+  
+const sessionStore = new MySQLStore(dbOptions);
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Static files
 app.use(express.static('public'));
 
-// ✅ Middleware urutan benar:
-app.use(express.urlencoded({ extended: true })); // ← HARUS sebelum routes
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: 'pbl-hole-detect', 
+    key: 'session_cookie_name',
+    secret: 'pbl-hole-detect',
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
-}));
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    }
+  }));
 
 app.use(flash());
 
+app.use((req, res, next) => {
+    res.locals.currentPath = req.path;
+    next();
+});
 // Route controller
 app.use(controller);
 
@@ -35,13 +57,20 @@ function isAuthenticated(req, res, next) {
     }
 }
 
-// const options = {
-//     key: fs.readFileSync('/opt/hole-detect-server/localhost-key.pem'),
-//     cert: fs.readFileSync('/opt/hole-detect-server/localhost.pem')
-// };
+function nocache(req, res, next) {
+    res.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    next();
+}
+const options = {
+    key: fs.readFileSync('/opt/hole-detect-server/localhost-key.pem'),
+    cert: fs.readFileSync('/opt/hole-detect-server/localhost.pem')
+};
 
-app.get('/', (req, res) => {
-    res.render('index', { title: 'Home Page'});
+app.get('/', nocache, (req, res) => {
+    const user = req.session.user;
+    res.render('index', { title: 'Home Page', user: user});
 });
 
 app.get('/login', (req, res) => {
@@ -74,48 +103,88 @@ app.get('/register', (req, res) => {
     });
 });
 
-app.get('/tracking-history', isAuthenticated, (req, res) => {
+app.get('/tracking-history', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
     res.render('tracking_history', { 
         title: 'History Page',
+        user: user
     });
 });
 
-app.get('/report', isAuthenticated, (req, res) => {
+app.get('/tracking-history/:id', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
+    const trackingId = req.params.id;
+    const detectionQuery = "SELECT d.*, u.nama AS user_name FROM detections AS d LEFT JOIN user AS u ON d.user_id = u.user_id WHERE d.detections_id = ?";
+    conn.query(detectionQuery, [trackingId], (err, detectionResult) => {
+        if (err || detectionResult.length === 0) {
+            return res.status(404).send("Data tidak ditemukan");
+        }
+
+        const detection = detectionResult[0];
+
+        const historyQuery = "SELECT * FROM detectionshistory WHERE detections_id = ? ORDER BY sequence ASC";
+        conn.query(historyQuery, [trackingId], (err, historyResult) => {
+            if (err) {
+                return res.status(500).send("Gagal ambil history");
+            }
+            const coordinates = historyResult.map(item => [item.latitude, item.longitude]);
+
+            const imageQuery = "SELECT * FROM detections_image WHERE detection_id = ?";
+            conn.query(imageQuery, [trackingId], (err, imageResult) => {
+                if (err) {
+                    return res.status(500).send("Gagal ambil gambar");
+                }
+
+                res.render('tracking_detail', {
+                    title: 'Tracking Detail',
+                    user,
+                    detection,
+                    detectionHistory: coordinates,
+                    detectionImages: imageResult
+                });
+            });
+        });
+    });
+});
+
+app.get('/report', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
     res.render('report', { 
         title: 'Report Page',
+        user: user
     });
 });
 
-app.get('/profile', isAuthenticated, (req, res) => {
+app.get('/profile', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
     res.render('profile', { 
         title: 'Profile Page',
+        user: user,
     });
 });
 
-app.get('/forget-passowrd', isAuthenticated, (req, res) => {
+app.get('/forget-passowrd', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
     res.render('forgetpassword', { 
         title: 'Forget Password Page',
+        user: user
     });
 });
 
-app.get('/tracking', isAuthenticated, (req, res) => {
-    res.render('tracking', { title: 'Tracking Detail'});
+app.get('/scan', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
+    res.render('scan', { title: 'Tracking Detail', user: user});
 });
 
-app.get('/tracking/:id', isAuthenticated, (req, res) => {
-    const trackingId = req.params.id;
-    res.render('tracking-detail', { 
-        title: 'Tracking Detail', 
-        id: trackingId,
-        lat1: 1.057290,
-        lon1: 103.919494,
-        lat2: 1.059859,
-        lon2: 103.922266
+app.get('/manage-user', isAuthenticated, nocache, (req, res) => {
+    const user = req.session.user;
+    let list_users = [];
+    const queryStr = "SELECT * FROM user";
+        conn.query(queryStr, [], (err, results) => {
+        list_users = results;
+        res.render('user', { title: 'Manage Users', user: user, list_users: list_users});
     });
 });
-
-
-
 
 const PORT = process.env.PORT || 3000;
 // https.createServer(options, app).listen(PORT, () => console.log(`Server running on port ${PORT}`));
