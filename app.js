@@ -7,6 +7,10 @@ const controller = require('./config/controller');
 const conn = require('./config/db');
 const fs = require('fs');
 const https = require('https');
+const pdf = require('html-pdf');
+const jwt = require('jsonwebtoken');
+const ejs = require('ejs');
+const JWT_SECRET = 'PBL_310';
 
 const app = express();
 
@@ -73,14 +77,19 @@ app.get('/', nocache, (req, res) => {
     res.render('index', { title: 'Home Page', user: user});
 });
 
+
 app.get('/login', (req, res) => {
     const error = req.flash('error');
     const email = req.flash('email');
+    const success = req.flash('success');
     const email_error = req.flash('email_error');
+    console.log('check here');
+    console.log(email + " " + success + " " + error);
     res.render('login', { 
         title: 'Login Page',
         error: error,
         email_error: email_error,
+        success: success,
         email: email.length > 0 ? email[0] : ''
     });
 });
@@ -103,6 +112,30 @@ app.get('/register', (req, res) => {
     });
 });
 
+app.get('/activate/:token', (req, res) => {
+    const token = req.params.token;
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const email = decoded.email;
+
+        const updateQuery = "UPDATE user SET status = 'active' WHERE email = ? AND status = 'inactive'";
+        conn.query(updateQuery, [email], (err, result) => {
+            if (err) {
+                return res.send('Terjadi kesalahan.');
+            }
+
+            if (result.affectedRows === 0) {
+                return res.send('Akun sudah aktif atau token tidak valid.');
+            }
+
+            res.send('Akun berhasil diaktifkan! Silakan login.');
+        });
+    } catch (err) {
+        return res.send('Link aktivasi tidak valid atau sudah kadaluarsa.');
+    }
+});
+
 app.get('/tracking-history', isAuthenticated, nocache, (req, res) => {
     const user = req.session.user;
     res.render('tracking_history', { 
@@ -121,6 +154,10 @@ app.get('/tracking-history/:id', isAuthenticated, nocache, (req, res) => {
         }
 
         const detection = detectionResult[0];
+
+        if (user.role == 'user' && detection.user_id != user.user_id) {
+            return res.redirect('/tracking-history');
+        }
 
         const historyQuery = "SELECT * FROM detectionshistory WHERE detections_id = ? ORDER BY sequence ASC";
         conn.query(historyQuery, [trackingId], (err, historyResult) => {
@@ -163,12 +200,37 @@ app.get('/profile', isAuthenticated, nocache, (req, res) => {
     });
 });
 
-app.get('/forget-passowrd', isAuthenticated, nocache, (req, res) => {
-    const user = req.session.user;
+app.get('/forget-password', (req, res) => {
+    const error = req.flash('error');
+    const success = req.flash('success');
+    console.log('hello trher');
+    console.log(error);
+    console.log(success);
     res.render('forgetpassword', { 
         title: 'Forget Password Page',
-        user: user
+        error: error,
+        success: success
     });
+});
+
+app.get('/reset-password/:token', (req, res) => {
+    const token = req.params.token;
+    const error = req.flash('error');
+    const password = req.flash('password');
+    const confirm_password = req.flash('confirm_password');
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        res.render('resetpassword', {
+            title: 'Reset Password Page',
+            user: decoded.user,
+            error: error,
+            password: password,
+            confirm_password: confirm_password,
+            token: token
+        });
+    } catch (err) {
+        res.send('Link reset password tidak valid atau sudah kadaluarsa.');
+    }
 });
 
 app.get('/scan', isAuthenticated, nocache, (req, res) => {
@@ -183,6 +245,39 @@ app.get('/manage-user', isAuthenticated, nocache, (req, res) => {
         conn.query(queryStr, [], (err, results) => {
         list_users = results;
         res.render('user', { title: 'Manage Users', user: user, list_users: list_users});
+    });
+});
+
+app.get('/generate-pdf/:id', (req, res) => {
+    const trackingId = req.params.id;
+    const detectionQuery = "SELECT d.*, u.nama AS user_name FROM detections AS d LEFT JOIN user AS u ON d.user_id = u.user_id WHERE d.detections_id = ?";
+    conn.query(detectionQuery, [trackingId], (err, detectionResult) => {
+        if (err || detectionResult.length === 0) {
+            return res.status(404).send("Data tidak ditemukan");
+        }
+
+        const detection = detectionResult[0];
+        const templatePath = path.join(__dirname, 'views', 'laporan.ejs');
+        ejs.renderFile(templatePath, { detection: detection }, (err, htmlContent) => {
+            if (err) {
+                return res.status(500).send('Error rendering HTML');
+            }
+            
+            const options = {
+                format: 'A4',
+                border: '10mm',
+            };
+            
+            pdf.create(htmlContent, options).toStream((err, stream) => {
+                if (err) {
+                    return res.status(500).send('Error generating PDF');
+                }
+                
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', 'inline; filename=laporan.pdf');
+                stream.pipe(res);
+            });
+        });
     });
 });
 

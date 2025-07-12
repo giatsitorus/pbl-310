@@ -2,12 +2,23 @@ const express = require('express');
 const conn = require('./db');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+
+const JWT_SECRET = 'PBL_310';
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'giat3003@gmail.com',
+        pass: 'syzpnndgwcdlpsdr'
+    }
+});
 
 router.post('/api/login', (req, res) => {
     const { username, password } = req.body;
 
     if (username && password) {
-        const queryStr = "SELECT * FROM user WHERE email = ? and status = 'active'";
+        const queryStr = "SELECT * FROM user WHERE email = ?";
         conn.query(queryStr, [username], (err, results) => {
         if (err) {
             console.log(err);
@@ -22,6 +33,11 @@ router.post('/api/login', (req, res) => {
         }
 
         const user = results[0];
+        if (user.status != 'active'){
+            req.flash('email_error', 'Status pengguna tidak aktif');
+            req.flash('email', username);
+            return res.redirect('/login');
+        }
         
         bcrypt.compare(password, user.password, (err, isMatch) => {
             if (err) {
@@ -32,12 +48,12 @@ router.post('/api/login', (req, res) => {
             }
             if (!isMatch) {
                 req.flash('error', 'Kata sandi salah');
+                console.log("getting here  :" + username);
                 req.flash('email', username);
                 return res.redirect('/login');
             }
             
             req.session.user = user;
-            console.log("cek here");
             console.log(req.session.user);
             return res.redirect('/');
         });
@@ -54,7 +70,7 @@ router.post('/api/login', (req, res) => {
 router.post('/api/register', function(req, res) {
     const { name, email, phone, password, confirm_password } = req.body;
     const role = 'user';
-    const status = 'active';
+    const status = 'inactive';
 
     if (password != confirm_password){
         req.flash('error', 'Password tidak cocok');
@@ -82,8 +98,33 @@ router.post('/api/register', function(req, res) {
                 req.flash('internal_error', 'Gagal mendaftar pengguna.');
                 return res.redirect('/register');
             }
-            req.session.user = { name };
-            return res.redirect('/');
+
+            const token = jwt.sign(
+                { email },
+                JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+            const activationLink = `http://192.168.1.15:3000/activate/${token}`;
+            const mailOptions = {
+                from: 'Hole Vision <giat3003@gmail.com>',
+                to: email,
+                subject: 'Aktivasi Akun Hole Vision',
+                html: `
+                    <p>Hai!</p>
+                    <p>Silakan klik link di bawah ini untuk mengaktifkan akun kamu:</p>
+                    <a href="${activationLink}">Klik disini</a>
+                    <p>Link berlaku selama 24 jam.</p>
+                `
+            };
+    
+            transporter.sendMail(mailOptions, (err2, info) => {
+                if (err2) {
+                    console.log(err2);
+                    req.flash('success', 'Gagal mengirim email aktivasi.');
+                }
+                req.flash('success', 'Registrasi berhasil! Cek email kamu untuk aktivasi akun.');
+                return res.redirect('/login');
+            });
         });
     });
 });
@@ -162,6 +203,95 @@ router.post('/api/change-password', function(req, res) {
     });
 });
 
+router.post('/api/send-reset-password', (req, res) => {
+    const { email } = req.body;
+
+    if (email) {
+        const queryStr = "SELECT * FROM user WHERE email = ? ";
+        conn.query(queryStr, [email], (err, results) => {
+            if (err) {
+                console.log(err);
+                req.flash('error', 'Internal Server Error');
+                return res.redirect('/forget-password');
+            }
+            if (results.length === 0) {
+                req.flash('error', 'Pengguna tidak ditemukan');
+                return res.redirect('/forget-password');
+            }
+
+            const user = results[0];
+            const payload = {
+                user: user,
+                exp: Math.floor(Date.now() / 1000) + (60 * 60)
+            };
+            const token = jwt.sign(payload, JWT_SECRET);
+    
+            const resetLink = `http://192.168.1.15:3000/reset-password/${token}`;
+            const mailOptions = {
+                from: 'Hole Vision <giat3003@gmail.com>',
+                to: email,
+                subject: 'Reset Password Hole Vision',
+                html: `
+                    <p>Halo,</p>
+                    <p>Klik link di bawah ini untuk mereset password kamu. Link ini berlaku selama 5 menit:</p>
+                    <a href="${resetLink}">Reset Password</a>
+                    <p>Jika kamu tidak meminta reset, abaikan saja email ini.</p>
+                `
+            };
+            
+            transporter.sendMail(mailOptions, (err, info) => {
+                if (err) {
+                    console.log('Gagal kirim email:', err);
+                    req.flash('error', 'Gagal mengirim email reset');
+                    return res.redirect('/forget-password');
+                } else {
+                    console.log('Email terkirim:', info.response);
+                    req.flash('success', `Link reset password telah dikirim ke email ${email}`);
+                    return res.redirect('/forget-password');
+                }
+            });
+        });
+    } else {
+        req.flash('error', 'Pengguna tidak ditemukan');
+        return res.redirect('/forget-password');
+    }
+
+});
+
+router.post('/api/public/change-password', function(req, res) {
+    const { email, password, confirm_password, token } = req.body;
+    if (password != confirm_password) {
+        req.flash('error', 'Password tidak cocok');
+        req.flash('password', password);
+        req.flash('confirm_password', confirm_password);
+        return res.redirect(`/reset-password/${token}`);
+    }
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
+        if (err) {
+            req.flash('error', 'Internal Server Error');
+            req.flash('password', password);
+            req.flash('confirm_password', confirm_password);
+            return res.redirect(`/reset-password/${token}`);
+        }
+
+        const queryStr = "UPDATE user SET password = ? WHERE email = ?";
+        const values = [hashedPassword, email];
+
+        conn.query(queryStr, values, (err, results) => {
+            if (err) {
+                console.log(err)
+                req.flash('error', 'Gagal mendaftar pengguna.');
+                req.flash('password', password);
+                req.flash('confirm_password', confirm_password);
+                return res.redirect(`/reset-password/${token}`);
+            }
+
+            req.flash('success', 'Berhasil mengubah kata sandi');
+            return res.redirect('/login');
+        });
+    });
+});
+
 router.post('/api/update-profile', function(req, res) {
     const user = req.session.user;
     const { name, email, phone, password } = req.body;
@@ -223,52 +353,6 @@ router.post('/api/update-profile', function(req, res) {
         });
     });
 });
-
-// router.post('/api/add-detection', function(req, res) {
-//     const user = req.session.user;
-//     const { hole_count, coordinates, distance, start_location, end_location, list_images } = req.body;
-
-//     conn.beginTransaction(err => {
-//         if (err) return res.status(500).json({ error: 'Transaction start failed' });
-
-//         const detectionQuery = "INSERT INTO detections (user_id, hole_count, distance, start_location, end_location) VALUES (?, ?, ?, ?, ?)";
-//         const detectionValues = [user.user_id, hole_count, distance, start_location, end_location];
-
-//         conn.query(detectionQuery, detectionValues, (err, result) => {
-//             if (err) {
-//                 return conn.rollback(() => {
-//                     console.error('Insert detection failed:', err);
-//                     res.status(500).json({ error: 'Insert detection failed' });
-//                 });
-//             }
-
-//             const detectionId = result.insertId;
-
-//             const historyValues = coordinates.map((coord, index) => [detectionId, index + 1, coord.lat, coord.lon]);
-//             const historyQuery = "INSERT INTO detectionshistory (detections_id, sequence, latitude, longitude) VALUES ?";
-
-//             conn.query(historyQuery, [historyValues], (err, result) => {
-//                 if (err) {
-//                     return conn.rollback(() => {
-//                         console.error('Insert detection history failed:', err);
-//                         res.status(500).json({ error: 'Insert detection history failed' });
-//                     });
-//                 }
-
-//                 conn.commit(err => {
-//                     if (err) {
-//                         return conn.rollback(() => {
-//                             console.error('Commit failed:', err);
-//                             res.status(500).json({ error: 'Commit failed' });
-//                         });
-//                     }
-
-//                     res.status(200).json({ message: 'Detection saved successfully' });
-//                 });
-//             });
-//         });
-//     });
-// });
 
 router.post('/api/add-detection', function(req, res) {
     const user = req.session.user;
@@ -426,8 +510,8 @@ router.post('/api/update-role', function(req, res) {
 
 
 router.post('/api/get/tracking', async (req, res) => {
-    const { detectionId, status, sort} = req.body;
-    console.log(req.body);
+    const user = req.session.user;
+    const { detectionId, status, sort, search } = req.body;
     if (detectionId){
         const queryStr = "SELECT * FROM detections WHERE detections_id = ?";
         conn.query(queryStr, [get], (err, results) => {
@@ -446,10 +530,27 @@ router.post('/api/get/tracking', async (req, res) => {
     }else{
         let queryStr = "SELECT d.*, u.nama AS user_name FROM detections AS d LEFT JOIN user AS u ON d.user_id = u.user_id";
         let values = []
-        if (status != 'semua'){
-            queryStr += ' WHERE d.status = ?';
+        let conditions = [];
+        if (status != 'semua') {
+            conditions.push("d.status = ?");
             values.push(status);
         }
+
+        if (search != '') {
+            conditions.push("(LOWER(d.start_location) LIKE ? OR LOWER(d.end_location) LIKE ? OR LOWER(u.nama) LIKE ?)");
+            const searchValue = `%${search}%`;
+            values.push(searchValue, searchValue, searchValue);
+        }
+
+        if (user.role == 'user'){
+            conditions.push("d.user_id = ?");
+            values.push(user.user_id);
+        }
+
+        if (conditions.length > 0) {
+            queryStr += ' WHERE ' + conditions.join(' AND ');
+        }
+        
         if (sort == 'terbaru'){
             queryStr += ' ORDER BY d.created_at DESC';
         }else if (sort == 'terlama'){
@@ -470,6 +571,27 @@ router.post('/api/get/tracking', async (req, res) => {
         });
     }
     
+});
+
+router.post('/api/update/tracking', async (req, res) => {
+    const { detectionId, status, reason } = req.body;
+    console.log(req.body);
+    const updateQuery = "UPDATE detections SET status = ?, decline_reason = ? WHERE detections_id = ?";
+    const values = [status, reason, detectionId];
+    
+    conn.query(updateQuery, values, (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).json({
+                "success": false,
+                "message": "Internal Server Error (Database Update Error)",
+            });
+        }
+        return res.status(200).json({
+            "success": true,
+            "message": "Berhasil mengubah data",
+        });
+    });
 });
 
 router.get('/api/logout', (req, res) => {

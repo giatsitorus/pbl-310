@@ -1,0 +1,68 @@
+<html>
+    <%- include('components/head') %>
+    <body>
+        <div class="container mt-4">
+            <h3 class="text-center mb-4">Laporan Deteksi Lubang</h3>
+            <div class="row">
+              <div class="col-12">
+                <table class="table table-bordered">
+                  <tbody>
+                    <tr>
+                        <td style="width: 150px;">Nama Pelapor</td>
+                        <td style="min-width: 5px;width: 5px;" >:</td>
+                        <td><%= detection.user_name%></td>
+                    </tr>
+                    <tr>
+                      <td style="width: 150px;">Tanggal Deteksi</td>
+                      <td style="min-width: 5px;width: 5px;">:</td>
+                      <td><%= detection.created_at %></td>
+                    </tr>
+                    <tr>
+                      <td style="width: 150px;">Lokasi awal</td>
+                      <td style="min-width: 5px;width: 5px;">:</td>
+                      <td><%= detection.start_location %></td>
+                    </tr>
+                    <tr>
+                      <td style="width: 150px;">Lokasi akhir</td>
+                      <td style="min-width: 5px;width: 5px;">:</td>
+                      <td><%= detection.end_location %></td>
+                    </tr>
+                    <tr>
+                        <td style="width: 150px;">Jarak</td>
+                        <td style="min-width: 5px;width: 5px;">:</td>
+                        <td><%= detection.distance %> Km</td>
+                      </tr>
+                    <tr>
+                        <td style="width: 150px;">Jumlah Lubang</td>
+                        <td style="min-width: 5px;width: 5px;">:</td>
+                        <td><%= detection.hole_count %></td>
+                    </tr>
+                    <tr>
+                      <td style="width: 150px;">Status</td>
+                      <td style="min-width: 5px;width: 5px;">:</td>
+                      <td class="status 
+                            <%= detection.status == 'diterima' ? 'bg-success text-white' : 
+                                detection.status == 'ditolak' ? 'bg-danger text-white' : 
+                                'bg-warning text-dark' %>">
+                            <%= detection.status == 'diterima' ? 'Diterima' : 
+                                detection.status == 'ditolak' ? 'Ditolak' : 
+                                'Menunggu' %>
+                        </td>
+                    </tr>
+                    <% if (detection.status == 'ditolak') { %>
+                        <tr>
+                        <td style="width: 150px;">Alasan Ditolak</td>
+                        <td style="min-width: 5px;width: 5px;">:</td>
+                        <td><%= detection.decline_reason %></td>
+                        </tr>
+                    <% } %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <footer class="text-center mt-5">
+              <p class="text-muted">&copy; 2025 Hole Vision - Laporan Deteksi Lubang</p>
+            </footer>
+          </div>
+    </body>
+</html>

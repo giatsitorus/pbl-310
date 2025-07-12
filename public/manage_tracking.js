@@ -47,10 +47,12 @@ $(document).ready(function(){
     const riwayatList = $("#riwayatList");
     const filterTanggal = $("#filterTanggal");
     const filterStatus = $("#filterStatus");
+    const filterSearch = $("#searchInput");
 
     function renderRiwayat() {
         const status = filterStatus.val();
         const sort = filterTanggal.val();
+        const search = filterSearch.val();
 
         riwayatList.html(
             `<li class='list-group-item d-flex justify-content-center align-items-center' style="height:200px;">
@@ -65,6 +67,7 @@ $(document).ready(function(){
             data: JSON.stringify({
                 status: status,
                 sort: sort,
+                search: search,
                 detectionId: false,
             }),
             dataType: 'json',
@@ -119,6 +122,21 @@ $(document).ready(function(){
     filterStatus.on("change", ()=>{
         renderRiwayat();
     });
+
+    function debounce(func, delay) {
+        let timeoutId;
+        return function (...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+    const debouncedRender = debounce(() => {
+        renderRiwayat();
+    }, 300);
+    
+    filterSearch.on('keyup', debouncedRender);
 
     renderRiwayat();
 })
